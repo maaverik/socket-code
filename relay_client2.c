@@ -21,9 +21,16 @@ int main(int argc, char **argv){
 	sendto(sock, data, strlen(data), 0, (struct sockaddr *)&server, slen);
 
 	while(1){
+		printf("\nEnter data\n");
+		fgets(data, 1024, stdin);
+		sendto(sock, data, strlen(data), 0, (struct sockaddr *)&server, slen);
+		printf("Data Sent\n");
+
+		printf("Waiting to receive\n");
 		recvlen = recvfrom(sock, data, 1024, 0, (struct sockaddr *)&server, &slen);
 		data[recvlen] = '\0';
 		printf("Received data: %s\n", data);
+
 	}
 	close(sock);
 	return 0;

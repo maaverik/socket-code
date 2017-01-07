@@ -29,7 +29,7 @@ int main(int argc, char **argv){
 		int recvlen = recvfrom(sock, data, 1024, 0, (struct sockaddr *)&cli, &slen);
 		printf("Received from ip: %s, port: %d\n", inet_ntoa(cli.sin_addr), ntohs(cli.sin_port));
 		data[recvlen] = '\0';
-		cli.sin_port = htons(cli2port);
+		cli.sin_port = cli.sin_port == htons(cli1port) ? htons(cli2port) : htons(cli1port);
 		sendto(sock, data, recvlen, 0, (struct sockaddr *)&cli, slen);
 		printf("Sent to ip: %s, port: %d\n", inet_ntoa(cli.sin_addr), ntohs(cli.sin_port));
 	}
