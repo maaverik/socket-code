@@ -5,6 +5,19 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <time.h>
+
+struct details {
+	int from_port;
+	int to_port;
+	char data[1000];
+};
+
+void delay(unsigned int mseconds)
+{
+    clock_t goal = mseconds + clock();
+    while (goal > clock());
+}
 
 int main(int argc, char **argv){
 	int sock = socket(AF_INET, SOCK_DGRAM, 0), recvlen;
@@ -14,24 +27,32 @@ int main(int argc, char **argv){
 
 	bzero(&server, sizeof(server));
 	server.sin_family = AF_INET;
-	server.sin_port = htons(atoi(argv[2]));
-	server.sin_addr.s_addr = inet_addr(argv[1]);
+	server.sin_port = htons(atoi("10000"));
+	server.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-	strcpy(data, "1");
-	sendto(sock, data, strlen(data), 0, (struct sockaddr *)&server, slen);
+	bzero(&client, sizeof(client));
+	client.sin_family = AF_INET;
+	client.sin_port = htons(atoi(argv[1]));
+	client.sin_addr.s_addr = inet_addr("127.0.0.1");
+	bind(sock, (struct sockaddr *)&client, sizeof(struct sockaddr_in));
+
+	struct details a, b;
+	a.from_port = atoi(argv[1]);
+	a.to_port = atoi(argv[2]);
+	strcpy(a.data, argv[3]);
 
 	while(1){
-
-		printf("Waiting to receive\n");
-		recvlen = recvfrom(sock, data, 1024, 0, (struct sockaddr *)&server, &slen);
-		data[recvlen] = '\0';
-		printf("Received data: %s\n", data);
-
-		printf("\nEnter data\n");
-		fgets(data, 1024, stdin);
-		sendto(sock, data, strlen(data), 0, (struct sockaddr *)&server, slen);
-		printf("Data sent\n");
-
+		printf("While\n");
+		if(time(NULL) % 2 == atoi(argv[1])%2){
+			printf("Sending\n");
+			sendto(sock, &a, sizeof(a), 0, (struct sockaddr *)&server, slen);
+		}
+		else{
+			printf("Receiving\n");
+			recvfrom(sock, &b, sizeof(a), 0, (struct sockaddr *)&server, &slen);
+			printf("Data received : %s\n", b.data);
+		}
+		delay(10000);
 	}
 	close(sock);
 	return 0;
