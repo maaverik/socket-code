@@ -49,9 +49,14 @@ int main(int argc, char **argv){
 		printf("Error: pass port no. also as command line argument\n");
 		return 0;
 	}
-	int sock, new, data_len, ans_len, sockaddr_len = sizeof(struct sockaddr_in);
+	int sock, new, data_len, ans_len, pid, sockaddr_len = sizeof(struct sockaddr_in);
 	struct sockaddr_in server, client;
 	char data[MAX_DATA], answer[MAX_DATA];
+
+	fd_set master,read_fds;
+	int fdmax;
+	FD_ZERO(&master);
+	FD_ZERO(&read_fds);
 
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0))  == ERROR){
 		perror("server socket: ");
@@ -72,31 +77,50 @@ int main(int argc, char **argv){
 		exit(-1);
 	}
 
+	FD_SET(sock,&master);
+	fdmax=sock;
+
 	printf("Waiting for connections\n");
 
 	while(1){
-		if ((new = accept(sock, (struct sockaddr *)&client, &sockaddr_len)) == -1){
-			perror("accept");
-			exit(-1);
-		}
-		printf("New client connected from port no %d and IP %s\n", ntohs(client.sin_port), inet_ntoa(client.sin_addr));
-		data_len = 1;
+		read_fds=master;
+		select(fdmax+1,&read_fds,NULL,NULL,NULL);
+		for (int i = 0; i <= fdmax; i++){
+			if (FD_ISSET(i,&read_fds)){
+				if (i==sock){
+					sockaddr_len=sizeof client;
+					new=accept(sock,(struct sockaddr *)&client,&sockaddr_len);
+					printf("New client connected from port no %d and IP %s\n", ntohs(client.sin_port), inet_ntoa(client.sin_addr));
+					FD_SET(new,&master);
+					if (new > fdmax){
+						fdmax=new;
+					}
+				}
+				else{
+					data_len=recv(new, data, MAX_DATA, 0);
+					if (data_len<1){
+						printf("connection closed\n");
+						close(i);
+						FD_CLR(i,&master);
+					}
+					else{
+						pid = fork();
+						if (pid == 0){		// child
+								calculate(data, answer);
+								ans_len = strlen(answer);
 
-		while(data_len){
-			data_len = recv(new, data, MAX_DATA, 0);
-
-			calculate(data, answer);
-			ans_len = strlen(answer);
-
-			if (data_len){
-				send(new, answer, ans_len, 0);
-				answer[ans_len] = '\0';
-				printf("Sent mesg: %s\n", answer);
+								send(new, answer, ans_len, 0);
+								answer[ans_len] = '\0';
+								printf("Sent mesg: %s\n", answer);
+						}
+							//printf("Client disconnected\n");
+						else {		// parent
+							close(i);
+						}
+					}
+				}
 			}
 		}
-		printf("Client disconnected\n");
-
-		close(new);
 	}
 	return 0;
 }

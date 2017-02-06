@@ -49,7 +49,7 @@ int main(int argc, char **argv){
 		printf("Error: pass port no. also as command line argument\n");
 		return 0;
 	}
-	int sock, new, data_len, ans_len, sockaddr_len = sizeof(struct sockaddr_in);
+	int sock, new, data_len, ans_len, pid, sockaddr_len = sizeof(struct sockaddr_in);
 	struct sockaddr_in server, client;
 	char data[MAX_DATA], answer[MAX_DATA];
 
@@ -72,31 +72,35 @@ int main(int argc, char **argv){
 		exit(-1);
 	}
 
-	printf("Waiting for connections\n");
-
 	while(1){
 		if ((new = accept(sock, (struct sockaddr *)&client, &sockaddr_len)) == -1){
 			perror("accept");
 			exit(-1);
 		}
 		printf("New client connected from port no %d and IP %s\n", ntohs(client.sin_port), inet_ntoa(client.sin_addr));
-		data_len = 1;
 
-		while(data_len){
-			data_len = recv(new, data, MAX_DATA, 0);
+		pid = fork();
 
-			calculate(data, answer);
-			ans_len = strlen(answer);
+		if (pid == 0){		// child
+			data_len = 1;
 
-			if (data_len){
-				send(new, answer, ans_len, 0);
-				answer[ans_len] = '\0';
-				printf("Sent mesg: %s\n", answer);
+			while(data_len){
+				data_len = recv(new, data, MAX_DATA, 0);
+
+				calculate(data, answer);
+				ans_len = strlen(answer);
+
+				if (data_len){
+					send(new, answer, ans_len, 0);
+					answer[ans_len] = '\0';
+					printf("Sent mesg: %s\n", answer);
+				}
 			}
+			printf("Client disconnected\n");
 		}
-		printf("Client disconnected\n");
-
-		close(new);
+		else {		// parent
+			close(new);
+		}
 	}
 	return 0;
 }
