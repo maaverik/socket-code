@@ -80,6 +80,8 @@ int main(int argc, char **argv){
 			exit(-1);
 		}
 		printf("New client connected from port no %d and IP %s\n", ntohs(client.sin_port), inet_ntoa(client.sin_addr));
+		close(sock);
+
 		data_len = 1;
 
 		while(data_len){
@@ -97,6 +99,10 @@ int main(int argc, char **argv){
 		printf("Client disconnected\n");
 
 		close(new);
+
+		sock = socket(AF_INET, SOCK_STREAM, 0);
+		bind(sock, (struct sockaddr *)&server, sockaddr_len);
+		listen(sock, MAX_CLIENTS);
 	}
 	return 0;
 }

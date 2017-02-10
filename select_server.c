@@ -88,6 +88,7 @@ int main(int argc, char **argv){
 		for (int i = 0; i <= fdmax; i++){
 			if (FD_ISSET(i,&read_fds)){
 				if (i==sock){
+					printf("Accepted\n");
 					sockaddr_len=sizeof client;
 					new=accept(sock,(struct sockaddr *)&client,&sockaddr_len);
 					printf("New client connected from port no %d and IP %s\n", ntohs(client.sin_port), inet_ntoa(client.sin_addr));
@@ -97,26 +98,22 @@ int main(int argc, char **argv){
 					}
 				}
 				else{
-					data_len=recv(new, data, MAX_DATA, 0);
+					printf("Receiving\n");
+					data_len=recv(i, data, MAX_DATA, 0);
 					if (data_len<1){
 						printf("connection closed\n");
 						close(i);
 						FD_CLR(i,&master);
+						//exit(0);
 					}
 					else{
-						pid = fork();
-						if (pid == 0){		// child
-								calculate(data, answer);
-								ans_len = strlen(answer);
+						printf("Calculating\n");
+						calculate(data, answer);
+						ans_len = strlen(answer);
 
-								send(new, answer, ans_len, 0);
-								answer[ans_len] = '\0';
-								printf("Sent mesg: %s\n", answer);
-						}
-							//printf("Client disconnected\n");
-						else {		// parent
-							close(i);
-						}
+						send(i, answer, ans_len, 0);
+						answer[ans_len] = '\0';
+						printf("Sent mesg: %s\n", answer);
 					}
 				}
 			}
